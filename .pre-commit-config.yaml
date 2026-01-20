@@ -1,0 +1,31 @@
+repos:
+  - repo: local
+    hooks:
+      # 1. BLACK - Using python -m black
+      - id: black
+        name: Black (Python formatting)
+        entry: python -m black
+        language: system
+        types: [python]
+        args: []
+        require_serial: true
+        
+      # 2. DJLINT REFORMAT - Using python -m djlint
+      - id: djlint-reformat
+        name: DjLint (reformat templates)
+        entry: python -m djlint
+        language: system
+        types: [file]
+        args: ["--reformat"]
+        files: \.(html|jinja|jinja2|django)$
+        pass_filenames: true
+        
+      # 3. DJLINT LINT - Using python -m djlint
+      # - id: djlint-lint
+      #   name: DjLint (lint templates)
+      #   entry: python -m djlint
+      #   language: system
+      #   types: [file]
+      #   args: ["--lint", "--profile=django"]
+      #   files: \.(html|jinja|jinja2|django)$
+      #   pass_filenames: true
