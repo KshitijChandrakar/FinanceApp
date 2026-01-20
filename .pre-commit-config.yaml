@@ -20,12 +20,4 @@ repos:
         files: \.(html|jinja|jinja2|django)$
         pass_filenames: true
         
-      # 3. DJLINT LINT - Using python -m djlint
-      # - id: djlint-lint
-      #   name: DjLint (lint templates)
-      #   entry: python -m djlint
-      #   language: system
-      #   types: [file]
-      #   args: ["--lint", "--profile=django"]
-      #   files: \.(html|jinja|jinja2|django)$
-      #   pass_filenames: true
+
