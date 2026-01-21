@@ -1,0 +1,52 @@
+<div>
+    <h2>Category Summary</h2>
+    <div id="category-summary"></div>
+</div>
+<script>
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const updateBtn = document.getElementById('updateBtn');
+        const categorySummary = document.getElementById('category-summary');
+        
+        updateBtn.addEventListener('click', function() {
+            fetch('/api/category-summary/')
+                .then(response => {
+                    if (!response.ok) {
+                        console.log(response);
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    updateCategorySummary(data);
+                })
+                .catch(error => {
+                    categorySummary.innerHTML = '<p>Error loading data: ' + error.message + '</p>';
+                });
+        });
+
+        function updateCategorySummary(data) {
+            let html = '';
+            
+            // Loop through categories
+            for (const [category, subcategories] of Object.entries(data.categories)) {
+                html += `<h3>${category}</h3>`;
+                html += '<ul>';
+                
+                // Loop through subcategories
+                for (const [subcategory, value] of Object.entries(subcategories)) {
+                    html += `<li>${subcategory}: ${value}</li>`;
+                }
+                
+                html += '</ul>';
+            }
+            
+            // Add grand total
+            html += `<h3>Grand Total: ${data.grand_total}</h3>`;
+            
+            categorySummary.innerHTML = html;
+        }
+    });
+</script>
+</div>
+<button id="updateBtn">Update Summary</button>
