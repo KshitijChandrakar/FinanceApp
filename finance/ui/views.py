@@ -1,11 +1,14 @@
 import json
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
+from django.core.paginator import Paginator
+from django.core.serializers import serialize
 from django.db.models import DecimalField, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
-from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
 
 from .models import *
 
@@ -65,17 +68,6 @@ def get_categories_json(request):
     # Using values_list to get distinct pairs
     categories_dict = categories()
     return JsonResponse(categories_dict)
-
-
-import json
-from datetime import datetime
-from decimal import Decimal, InvalidOperation
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
-
-from .models import Transaction
 
 
 @csrf_exempt
@@ -179,3 +171,51 @@ def transaction_add(request):
         return JsonResponse(
             {"error": f"An unexpected error occurred: {str(e)}"}, status=500
         )
+
+
+# API view for JSON data
+@require_GET
+def transaction_api(request):
+    # Get query parameters
+    page = request.GET.get("page", 1)
+    per_page = request.GET.get("per_page", 5)
+
+    # Get all transactions ordered by date (recent first)
+    transactions = Transaction.objects.all().order_by("-datetime")
+
+    # Pagination
+    paginator = Paginator(transactions, per_page)
+
+    try:
+        page_number = int(page)
+        if page_number < 1:
+            page_number = 1
+        elif page_number > paginator.num_pages:
+            page_number = paginator.num_pages
+    except ValueError:
+        page_number = 1
+
+    page_obj = paginator.get_page(page_number)
+
+    # Prepare data for JSON response
+    data = {
+        "count": paginator.count,
+        "num_pages": paginator.num_pages,
+        "current_page": page_obj.number,
+        "has_next": page_obj.has_next(),
+        "has_previous": page_obj.has_previous(),
+        "transactions": [],
+    }
+
+    for transaction in page_obj.object_list:
+        data["transactions"].append(
+            {
+                "id": transaction.id,
+                "datetime": transaction.datetime.isoformat(),
+                "category": transaction.category,
+                "subcategory": transaction.subcategory,
+                "amount": str(transaction.amount),  # Convert Decimal to string
+            }
+        )
+
+    return JsonResponse(data, safe=False, json_dumps_params={"indent": 2})

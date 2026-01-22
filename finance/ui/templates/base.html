@@ -1,11 +1,13 @@
 <!DOCTYPE html>
+{% load static %}
 <html>
     <head>
+        <link rel="stylesheet" href="static/css/tachyons.css" />
         <title>
             {% block title %}Default Title{% endblock %}
         </title>
     </head>
-    <body>
+    <body class="">
         <main>
             {% block content %}{% endblock %}
         </main>

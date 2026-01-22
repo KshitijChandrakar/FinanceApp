@@ -29,6 +29,8 @@ class Transaction(models.Model):
 
     # Optional foreign key relationship to Category
     # category_ref = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+    class Meta:
+        ordering = ["-datetime"]  # Default ordering by recent first
 
     def __str__(self):
         return f"{self.datetime} - {self.category} - {self.amount}"
