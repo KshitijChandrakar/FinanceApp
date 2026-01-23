@@ -4,7 +4,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.paginator import Paginator
 from django.core.serializers import serialize
-from django.db.models import DecimalField, Sum
+from django.db.models import DecimalField, F, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -144,6 +144,11 @@ def transaction_add(request):
         )
 
         transaction.save()
+
+        updated_count = Category.objects.filter(
+            category=category,
+            subcategory=subcategory,
+        ).update(total_sum=F("total_sum") + amount)
 
         # Return success response
         return JsonResponse(

@@ -135,10 +135,12 @@
                     return response.json();
                 })
                 .then(data => {
+                    
                     messageDiv.textContent = 'Transaction added successfully!';
                     messageDiv.style.color = 'green';
                     form.reset();
                     subcategorySelect.disabled = true;
+                    fetchApiData(1);
                 })
                 .catch(error => {
                     console.error('Error:', error);
