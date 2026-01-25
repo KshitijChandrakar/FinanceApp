@@ -20,6 +20,7 @@ EditorConfig==0.17.1
 et_xmlfile==2.0.0
 filelock==3.20.3
 gunicorn==24.1.1
+h11==0.16.0
 identify==2.6.16
 idna==3.11
 Jinja2==3.1.6
@@ -55,5 +56,6 @@ text-unidecode==1.3
 tqdm==4.67.1
 tzdata==2025.3
 urllib3==2.6.3
+uvicorn==0.40.0
 virtualenv==20.36.1
 whitenoise==6.11.0

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# build.sh
+# exit on error
+set -o errexit
 
-# Install Python dependencies
+# change this line for whichever package you use, such as pip, or poetry, etc.
 pip install -r requirements.txt
 
-# Collect static files
-python manage.py collectstatic --noinput
+# convert our static asset files on Render
+python manage.py collectstatic --no-input
 
-# Apply database migrations
+# apply any database migrations that are outstanding
 python manage.py migrate
