@@ -1,20 +1,20 @@
 databases:
-  - name: mysitedb
+  - name: financedb
     plan: free
-    databaseName: mysite
-    user: mysite
+    databaseName: finance
+    user: finance
 
 services:
   - type: web
     plan: free
-    name: mysite
+    name: finance
     runtime: python
     buildCommand: './build.sh'
-    startCommand: 'python -m gunicorn mysite.asgi:application -k uvicorn.workers.UvicornWorker'
+    startCommand: 'python -m gunicorn finance.asgi:application -k uvicorn.workers.UvicornWorker'
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: mysitedb
+          name: financedb
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
