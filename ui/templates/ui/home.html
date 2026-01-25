@@ -10,7 +10,10 @@
         </div>
         <!-- Right column - Summary pane -->
         <div class="w-100 w-third-l pa2">
-            <div class="bg-white br3 shadow-1 pa3 h-100 sticky top-1">{% include "ui/summary.html" %}</div>
+            <div class="bg-white br3 shadow-1 pa3 h-100 sticky top-1">
+                {% include "ui/summary.html" %}
+                {% include "ui/typst.html" %}
+            </div>
         </div>
     </div>
 {% endblock %}

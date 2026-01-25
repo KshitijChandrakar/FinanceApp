@@ -1,4 +1,15 @@
 import json
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
+from .models import *
+import pandas as pd
+from django.db import transaction
+from django.db.models import fields
+import pandas as pd
+
+# models_columns.py
+from django.apps import apps
 from decimal import Decimal
 from io import BytesIO
 
@@ -102,10 +113,6 @@ def export_to_json(request):
     return JsonResponse(result, safe=False, json_dumps_params={"indent": 2})
 
 
-# models_columns.py
-from django.apps import apps
-
-
 def get_model_columns():
     """Get expected columns for all models in the 'ui' app."""
     expected = {}
@@ -130,7 +137,6 @@ def get_model_columns():
 
 
 # excel_importer.py
-import pandas as pd
 
 
 def import_excel_strict(file):
@@ -185,11 +191,6 @@ def import_excel_strict(file):
         imported_data[sheet] = df
 
     return imported_data
-
-
-import pandas as pd
-from django.db import transaction
-from django.db.models import fields
 
 
 def delete_rows(df, model, batch_size=1000):
@@ -295,10 +296,6 @@ def sync_dataframes_to_models(dataframes_dict, model_mapping):
 
 
 # views.py
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-
-from .models import *
 
 
 @csrf_exempt
