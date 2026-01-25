@@ -1,0 +1,33 @@
+{
+    "Asset": {
+        "Land": 0.0,
+        "Building": 0.0,
+        "Equipment": 0.0,
+        "Vehicle": 0.0,
+        "Furniture": 0.0
+    },
+    "Liability": {
+        "Bank Loan": 100.0,
+        "Credit Card": 0.0,
+        "Mortgage": 0.0,
+        "Supplier Credit": 0.0
+    },
+    "Income": {
+        "Sales": 0.0,
+        "Services": 0.0,
+        "Interest": 0.0,
+        "Rental": 0.0
+    },
+    "Expense": {
+        "Salary": 0.0,
+        "Rent": 0.0,
+        "Utilities": 0.0,
+        "Marketing": 0.0,
+        "Maintenance": 0.0
+    },
+    "Equity": {
+        "Owner's Capital": 0.0,
+        "Retained Earnings": 0.0,
+        "Share Capital": 0.0
+    }
+}

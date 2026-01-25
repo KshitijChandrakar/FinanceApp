@@ -1,0 +1,80 @@
+<input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;">
+<!-- Upload button -->
+<button id="uploadBtn">Upload Excel File</button>
+<!-- Status display -->
+<div id="status"></div>
+<script>
+        document.getElementById('uploadBtn').addEventListener('click', function() {
+            // Trigger the hidden file input
+            document.getElementById('excelFile').click();
+        });
+        
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Check file extension
+            if (!file.name.match(/\.(xlsx|xls)$/i)) {
+                showStatus('Error: Only Excel files (.xlsx, .xls) are allowed', 'error');
+                return;
+            }
+            
+            uploadFile(file);
+        });
+        
+        function uploadFile(file) {
+            showStatus('Uploading...', 'loading');
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Update this URL to match your Django endpoint
+            fetch('api/excel-import/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showStatus(`Success! Imported ${data.sheets_imported ? data.sheets_imported.length : 0} sheet(s)`, 'success');
+                    if (data.row_counts) {
+                        Object.entries(data.row_counts).forEach(([sheet, count]) => {
+                            showStatus(`Sheet "${sheet}": ${count} rows`, 'info');
+                        });
+                    }
+                } else {
+                    showStatus(`Error: ${data.msg}`, 'error');
+                }
+            })
+            .catch(error => {
+                showStatus(`Upload failed: ${error.message}`, 'error');
+            });
+        }
+        
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            const p = document.createElement('p');
+            p.textContent = message;
+            
+            // Simple color coding
+            if (type === 'error') {
+                p.style.color = 'red';
+            } else if (type === 'success') {
+                p.style.color = 'green';
+            } else if (type === 'loading') {
+                p.style.color = 'blue';
+            }
+            
+            statusDiv.appendChild(p);
+            
+            // Clear previous messages after 10 seconds (optional)
+            setTimeout(() => {
+                if (p.parentElement === statusDiv) {
+                    statusDiv.removeChild(p);
+                }
+            }, 10000);
+        }
+</script>
