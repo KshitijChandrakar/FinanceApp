@@ -182,18 +182,18 @@
       };
 
       // ─── dom refs ─────────────────────────────────────────────────────────────
-      const srccategoryselect = document.getelementbyid("src-category");
-      const srcsubcategoryselect = document.getelementbyid("src-subcategory");
-      const srccategorylocked = document.getelementbyid("src-category-locked");
-      const dstcategoryselect = document.getelementbyid("dst-category");
-      const dstsubcategoryselect = document.getelementbyid("dst-subcategory");
-      const dstcategorylocked = document.getelementbyid("dst-category-locked");
-      const amountinput = document.getelementbyid("amount");
-      const messagediv = document.getelementbyid("message");
-      const buybtn = document.getelementbyid("buy-btn");
-      const sellbtn = document.getelementbyid("sell-btn");
-      const portfoliobody = document.getelementbyid("portfolio-body");
-      const historybody = document.getelementbyid("history-body");
+      const srccategoryselect = document.getElementById("src-category");
+      const srcsubcategoryselect = document.getElementById("src-subcategory");
+      const srccategorylocked = document.getElementById("src-category-locked");
+      const dstcategoryselect = document.getElementById("dst-category");
+      const dstsubcategoryselect = document.getElementById("dst-subcategory");
+      const dstcategorylocked = document.getElementById("dst-category-locked");
+      const amountinput = document.getElementById("amount");
+      const messagediv = document.getElementById("message");
+      const buybtn = document.getElementById("buy-btn");
+      const sellbtn = document.getElementById("sell-btn");
+      const portfoliobody = document.getElementById("portfolio-body");
+      const historybody = document.getElementById("history-body");
 
       // ─── mode ─────────────────────────────────────────────────────────────────
       // "double" | "single-buy" | "single-sell"
@@ -203,8 +203,8 @@
         currentmode = mode;
 
         // update button highlight
-        document.queryselectorall(".mode-btn").foreach((btn) => {
-          btn.classlist.toggle("active", btn.dataset.mode === mode);
+        document.querySelectorAll(".mode-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.mode === mode);
         });
 
         // reset form first so locked values are applied cleanly
@@ -214,15 +214,15 @@
           // lock source category to assets
           srccategoryselect.style.display = "none";
           srccategorylocked.style.display = "";
-          srccategorylocked.textcontent = "assets";
+          srccategorylocked.textContent = "assets";
           // populate source subcategory immediately
-          srcsubcategoryselect.innerhtml =
+          srcsubcategoryselect.innerHTML =
             '<option value="">select a subcategory</option>';
-          categories["assets"].foreach((sub) => {
-            const opt = document.createelement("option");
+          categories["assets"].forEach((sub) => {
+            const opt = document.createElement("option");
             opt.value = sub;
-            opt.textcontent = sub;
-            srcsubcategoryselect.appendchild(opt);
+            opt.textContent = sub;
+            srcsubcategoryselect.appendChild(opt);
           });
           srcsubcategoryselect.disabled = false;
           // destination is free
@@ -235,15 +235,15 @@
           // lock destination category to assets
           dstcategoryselect.style.display = "none";
           dstcategorylocked.style.display = "";
-          dstcategorylocked.textcontent = "assets";
+          dstcategorylocked.textContent = "assets";
           // populate destination subcategory immediately
-          dstsubcategoryselect.innerhtml =
+          dstsubcategoryselect.innerHTML =
             '<option value="">select a subcategory</option>';
-          categories["assets"].foreach((sub) => {
-            const opt = document.createelement("option");
+          categories["assets"].forEach((sub) => {
+            const opt = document.createElement("option");
             opt.value = sub;
-            opt.textcontent = sub;
-            dstsubcategoryselect.appendchild(opt);
+            opt.textContent = sub;
+            dstsubcategoryselect.appendChild(opt);
           });
           dstsubcategoryselect.disabled = false;
         } else {
@@ -257,17 +257,17 @@
         triggerpreview();
       }
 
-      document.queryselectorall(".mode-btn").foreach((btn) => {
-        btn.addeventlistener("click", () => applymode(btn.dataset.mode));
+      document.querySelectorAll(".mode-btn").forEach((btn) => {
+        btn.addEventListener("click", () => applymode(btn.dataset.mode));
       });
 
       // ─── populate both category dropdowns ────────────────────────────────────
       function populatecategoryselect(sel) {
-        object.keys(categories).foreach((cat) => {
-          const opt = document.createelement("option");
+        object.keys(categories).forEach((cat) => {
+          const opt = document.createElement("option");
           opt.value = cat;
-          opt.textcontent = cat;
-          sel.appendchild(opt);
+          opt.textContent = cat;
+          sel.appendChild(opt);
         });
       }
       populatecategoryselect(srccategoryselect);
@@ -275,25 +275,25 @@
 
       // ─── wire category → subcategory ─────────────────────────────────────────
       function wirecategorysubcategory(catsel, subsel) {
-        catsel.addeventlistener("change", function () {
+        catsel.addEventListener("change", function () {
           const selected = this.value;
-          subsel.innerhtml = '<option value="">select a subcategory</option>';
+          subsel.innerHTML = '<option value="">select a subcategory</option>';
           subsel.disabled = !selected;
           if (selected && categories[selected]) {
-            categories[selected].foreach((sub) => {
-              const opt = document.createelement("option");
+            categories[selected].forEach((sub) => {
+              const opt = document.createElement("option");
               opt.value = sub;
-              opt.textcontent = sub;
-              subsel.appendchild(opt);
+              opt.textContent = sub;
+              subsel.appendChild(opt);
             });
           }
           triggerpreview();
         });
-        subsel.addeventlistener("change", triggerpreview);
+        subsel.addEventListener("change", triggerpreview);
       }
       wirecategorysubcategory(srccategoryselect, srcsubcategoryselect);
       wirecategorysubcategory(dstcategoryselect, dstsubcategoryselect);
-      amountinput.addeventlistener("input", triggerpreview);
+      amountinput.addEventListener("input", triggerpreview);
 
       // ─── portfolio helpers ────────────────────────────────────────────────────
       function getbalance(category, subcategory) {
@@ -309,7 +309,7 @@
         );
         if (idx === -1) return;
         const newamount =
-          math.round((portfolio[idx].amount - amount) * 100) / 100;
+          Math.round((portfolio[idx].amount - amount) * 100) / 100;
         if (newamount === 0) portfolio.splice(idx, 1);
         else portfolio[idx].amount = newamount;
       }
@@ -322,7 +322,7 @@
           portfolio.push({ category, subcategory, amount });
         } else {
           portfolio[idx].amount =
-            math.round((portfolio[idx].amount + amount) * 100) / 100;
+            Math.round((portfolio[idx].amount + amount) * 100) / 100;
         }
       }
 
@@ -378,7 +378,7 @@
             srcsub,
             dstcat,
             dstsub,
-            amount: math.round(amount * 100) / 100,
+            amount: Math.round(amount * 100) / 100,
           };
         }
 
@@ -404,7 +404,7 @@
               : null,
           amount:
             !isnan(amount) && amount > 0 && isfinite(amount)
-              ? math.round(amount * 100) / 100
+              ? Math.round(amount * 100) / 100
               : null,
         };
       }
@@ -420,13 +420,13 @@
           `<tr class="${cls}">
         <td>${e.category}</td>
         <td>${e.subcategory}</td>
-        <td>${e.amount != null ? number(e.amount).tofixed(2) : "—"}</td>
+        <td>${e.amount != null ? Number(e.amount).tofixed(2) : "—"}</td>
       </tr>`;
 
         let html = "";
 
         if (portfolio.length === 0 && !h.ghostdst) {
-          portfoliobody.innerhtml =
+          portfoliobody.innerHTML =
             '<tr><td colspan="3">no entries yet</td></tr>';
           return;
         }
@@ -449,7 +449,7 @@
           html += makerow(h.ghostdst, cls);
         }
 
-        portfoliobody.innerhtml = html;
+        portfoliobody.innerHTML = html;
       }
 
       // ─── render history ────────────────────────────────────────────────────────
@@ -460,7 +460,7 @@
         opts = opts || {};
         const rows = history.slice().reverse();
         const val = (v) => (v != null ? v : "—");
-        const fmt = (v) => (v != null ? number(v).tofixed(2) : "—");
+        const fmt = (v) => (v != null ? Number(v).tofixed(2) : "—");
 
         const makerow = (e, cls) =>
           `<tr class="${cls}">
@@ -470,14 +470,14 @@
         <td>${val(e.srcsub)}</td>
         <td>${val(e.dstcat)}</td>
         <td>${val(e.dstsub)}</td>
-        <td>${e.amount != null ? number(e.amount).tofixed(2) : "—"}</td>
+        <td>${e.amount != null ? Number(e.amount).tofixed(2) : "—"}</td>
         <td>${val(e.timestamp)}</td>
       </tr>`;
 
         let html = "";
         if (opts.ghostrow) html += makerow(opts.ghostrow, "preview-hist");
         if (rows.length === 0 && !opts.ghostrow) {
-          historybody.innerhtml =
+          historybody.innerHTML =
             '<tr><td colspan="8">no transactions yet</td></tr>';
           return;
         }
@@ -486,12 +486,12 @@
             makerow(e, i === 0 && opts.committop ? "commit-hist" : ""),
           )
           .join("");
-        historybody.innerhtml = html;
+        historybody.innerHTML = html;
       }
 
       // ─── live preview ─────────────────────────────────────────────────────────
       function triggerpreview() {
-        messagediv.textcontent = "";
+        messagediv.textContent = "";
 
         const p = sanitiseinputs("partial");
 
@@ -504,7 +504,7 @@
         if (srckey && p.amount) {
           const srcbalance = getbalance(p.srccat, p.srcsub);
           if (srcbalance < p.amount) {
-            messagediv.textcontent = `insufficient balance: ${p.srcsub} (${p.srccat}) has ${srcbalance.tofixed(2)}, need ${p.amount.tofixed(2)}.`;
+            messagediv.textContent = `insufficient balance: ${p.srcsub} (${p.srccat}) has ${srcbalance.tofixed(2)}, need ${p.amount.tofixed(2)}.`;
             insufficient = true;
           }
         }
@@ -558,19 +558,19 @@
         // in single-buy, source subcategory stays populated (category is locked)
         if (currentmode === "single-buy") {
           srcsubcategoryselect.disabled = false;
-          dstsubcategoryselect.innerhtml =
+          dstsubcategoryselect.innerHTML =
             '<option value="">select a category first</option>';
           dstsubcategoryselect.disabled = true;
         } else if (currentmode === "single-sell") {
-          srcsubcategoryselect.innerhtml =
+          srcsubcategoryselect.innerHTML =
             '<option value="">select a category first</option>';
           srcsubcategoryselect.disabled = true;
           dstsubcategoryselect.disabled = false;
         } else {
-          srcsubcategoryselect.innerhtml =
+          srcsubcategoryselect.innerHTML =
             '<option value="">select a category first</option>';
           srcsubcategoryselect.disabled = true;
-          dstsubcategoryselect.innerhtml =
+          dstsubcategoryselect.innerHTML =
             '<option value="">select a category first</option>';
           dstsubcategoryselect.disabled = true;
         }
@@ -578,11 +578,11 @@
 
       // ─── commit transaction ───────────────────────────────────────────────────
       function handletransaction(action) {
-        messagediv.textcontent = "";
+        messagediv.textContent = "";
 
         const r = sanitiseinputs("full");
         if (!r.ok) {
-          messagediv.textcontent = r.error;
+          messagediv.textContent = r.error;
           return;
         }
 
@@ -590,7 +590,7 @@
         const srcbalance = getbalance(srccat, srcsub);
 
         if (srcbalance < amount) {
-          messagediv.textcontent =
+          messagediv.textContent =
             `insufficient ${action === "buy" ? "balance" : "holdings"}: ` +
             `${srcsub} (${srccat}) has ${srcbalance.tofixed(2)}, need ${amount.tofixed(2)}.`;
           renderportfolio();
@@ -602,7 +602,7 @@
         credit(dstcat, dstsub, amount);
 
         const label = action === "buy" ? "buy" : "sell";
-        messagediv.textcontent = `${label} successful: ${amount.tofixed(2)} moved from ${srcsub} (${srccat}) → ${dstsub} (${dstcat}).`;
+        messagediv.textContent = `${label} successful: ${amount.tofixed(2)} moved from ${srcsub} (${srccat}) → ${dstsub} (${dstcat}).`;
 
         history.push({
           id: history.length + 1,
@@ -612,7 +612,7 @@
           dstcat,
           dstsub,
           amount,
-          timestamp: new date().tolocalestring(),
+          timestamp: new Date().tolocalestring(),
         });
 
         // render with solid commit highlights
@@ -624,7 +624,7 @@
         renderhistory({ committop: true });
 
         // after 10s, fade the commit highlights back to normal
-        settimeout(() => {
+        setTimeout(() => {
           renderportfolio();
           renderhistory({});
         }, 10000);
@@ -632,8 +632,8 @@
         resetform();
       }
 
-      buybtn.addeventlistener("click", () => handletransaction("buy"));
-      sellbtn.addeventlistener("click", () => handletransaction("sell"));
+      buybtn.addEventListener("click", () => handletransaction("buy"));
+      sellbtn.addEventListener("click", () => handletransaction("sell"));
 
       // initial render
       renderportfolio();

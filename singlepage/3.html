@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>transaction form - full portfolio view</title>
+        <link rel="stylesheet" href="tachyons.css" />
+        <style>
+      /* ── preview / commit highlight styles ─────────────────────────── */
+
+      /* portfolio rows – dotted while previewing */
+      tr.preview-src {
+        outline: 2px dashed red;
+      }
+      tr.preview-dst {
+        outline: 2px dashed green;
+      }
+
+      /* portfolio rows – solid after commit (fades out) */
+      tr.commit-src {
+        outline: 2px solid red;
+      }
+      tr.commit-dst {
+        outline: 2px solid green;
+      }
+
+      /* history rows – dotted while previewing, solid after commit */
+      tr.preview-hist {
+        outline: 2px dashed orange;
+        background: #fffde7;
+      }
+      tr.commit-hist {
+        outline: 2px solid orange;
+        background: #fffde7;
+      }
+      /* ── mode buttons ───────────────────────────────────────────────── */
+      .mode-btn {
+        cursor: pointer;
+        padding: 4px 10px;
+      }
+      .mode-btn.active {
+        background: #1a6fbd;
+        color: #fff;
+        font-weight: bold;
+      }
+      .zero-balance {
+        opacity: 0.7;
+      }
+        </style>
+    </head>
+    <body>
+        <!-- portfolio + transaction area -->
+        <div class="flex">
+            <div class="flex-column">
+                <!-- transaction form -->
+                <div id="transaction form">
+                    <h3>add transaction</h3>
+                    <!-- mode selector -->
+                    <div id="mode-bar">
+                        <button class="mode-btn active" data-mode="double">double entry</button>
+                        <button class="mode-btn" data-mode="single-buy">single entry buy</button>
+                        <button class="mode-btn" data-mode="single-sell">single entry sell</button>
+                    </div>
+                    <br />
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>source</th>
+                                <th></th>
+                                <th>destination</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <label for="src-category">category:</label>
+                                    <br />
+                                    <select id="src-category">
+                                        <option value="">select a category</option>
+                                    </select>
+                                    <span id="src-category-locked" style="display: none"></span>
+                                </td>
+                                <td style="padding: 0 1em; vertical-align: middle">→</td>
+                                <td>
+                                    <label for="dst-category">category:</label>
+                                    <br />
+                                    <select id="dst-category">
+                                        <option value="">select a category</option>
+                                    </select>
+                                    <span id="dst-category-locked" style="display: none"></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <label for="src-subcategory">subcategory:</label>
+                                    <br />
+                                    <select id="src-subcategory" disabled>
+                                        <option value="">select a category first</option>
+                                    </select>
+                                </td>
+                                <td></td>
+                                <td>
+                                    <label for="dst-subcategory">subcategory:</label>
+                                    <br />
+                                    <select id="dst-subcategory" disabled>
+                                        <option value="">select a category first</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div>
+                        <label for="amount">amount:</label>
+                        <input type="number"
+                               id="amount"
+                               step="0.01"
+                               min="0.01"
+                               placeholder="enter amount" />
+                    </div>
+                    <div>
+                        <button id="buy-btn">buy</button>
+                        <button id="sell-btn">sell</button>
+                    </div>
+                    <div id="message"></div>
+                </div>
+                <hr />
+                <!-- transaction history -->
+                <div id="history-display">
+                    <h3>transaction history</h3>
+                    <table border="1" id="history-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>action</th>
+                                <th>source category</th>
+                                <th>source subcategory</th>
+                                <th>dest category</th>
+                                <th>dest subcategory</th>
+                                <th>amount</th>
+                                <th>timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <tr>
+                                <td colspan="8">no transactions yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="data-display">
+                <h3>portfolio</h3>
+                <table border="1" id="portfolio-table">
+                    <thead>
+                        <tr>
+                            <th>category</th>
+                            <th>subcategory</th>
+                            <th>amount ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-body">
+                        <tr>
+                            <td colspan="3">loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <script>
+      // ─── GLOBAL DATA STRUCTURES ────────────────────────────────────────────────
+      // Hardcoded category tree (ALL possible entries)
+      const categories = {
+        assets: ["cash", "bank balance"],
+        equities: ["aapl", "tsla", "googl", "msft"],
+        crypto: ["bitcoin", "ethereum", "solana"],
+        bonds: ["us treasury", "corporate bond", "municipal bond"],
+        commodities: ["gold", "silver", "crude oil"],
+      };
+
+      // Build the full master list: every category+subcategory combination
+      function buildFullPortfolioTemplate() {
+        const fullList = [];
+        for (const [cat, subList] of Object.entries(categories)) {
+          for (const sub of subList) {
+            fullList.push({ category: cat, subcategory: sub, amount: 0 });
+          }
+        }
+        return fullList;
+      }
+
+      // Active portfolio: start with zero for every possible entry (show all)
+      let portfolioMaster = buildFullPortfolioTemplate();
+
+      // Helper: find index in master array
+      function findPortfolioIndex(category, subcategory) {
+        return portfolioMaster.findIndex(
+          (entry) =>
+            entry.category === category && entry.subcategory === subcategory,
+        );
+      }
+
+      // Helper: get balance from master (always exists because we pre-seed all combos)
+      function getBalance(category, subcategory) {
+        const idx = findPortfolioIndex(category, subcategory);
+        if (idx === -1) return -1;
+        return portfolioMaster[idx].amount;
+      }
+
+      // Debit from specific (cat,sub) – amount is positive number to subtract
+      function debit(category, subcategory, amount) {
+        const idx = findPortfolioIndex(category, subcategory);
+        if (idx === -1) return false;
+        let newAmount = portfolioMaster[idx].amount - amount;
+        newAmount = Math.round(newAmount * 100) / 100;
+        portfolioMaster[idx].amount = newAmount;
+        return true;
+      }
+
+      // Credit to specific (cat,sub)
+      function credit(category, subcategory, amount) {
+        const idx = findPortfolioIndex(category, subcategory);
+        if (idx === -1) return false;
+        let newAmount = portfolioMaster[idx].amount + amount;
+        newAmount = Math.round(newAmount * 100) / 100;
+        portfolioMaster[idx].amount = newAmount;
+        return true;
+      }
+
+      // Transaction history array
+      const history = [];
+
+      // ─── DOM references ─────────────────────────────────────────────────────────
+      const srccategoryselect = document.getElementById("src-category");
+      const srcsubcategoryselect = document.getElementById("src-subcategory");
+      const srccategorylocked = document.getElementById("src-category-locked");
+      const dstcategoryselect = document.getElementById("dst-category");
+      const dstsubcategoryselect = document.getElementById("dst-subcategory");
+      const dstcategorylocked = document.getElementById("dst-category-locked");
+      const amountinput = document.getElementById("amount");
+      const messagediv = document.getElementById("message");
+      const buybtn = document.getElementById("buy-btn");
+      const sellbtn = document.getElementById("sell-btn");
+      const portfoliobody = document.getElementById("portfolio-body");
+      const historybody = document.getElementById("history-body");
+
+      // ─── MODE state ────────────────────────────────────────────────────────────
+      let currentmode = "double"; // "double" | "single-buy" | "single-sell"
+
+      // ─── Helper: populate category dropdowns from categories object ────────────
+      function populateCategorySelect(selectElement) {
+        selectElement.innerHTML = '<option value="">select a category</option>';
+        Object.keys(categories).forEach((cat) => {
+          const opt = document.createElement("option");
+          opt.value = cat;
+          opt.textContent = cat;
+          selectElement.appendChild(opt);
+        });
+      }
+      populateCategorySelect(srccategoryselect);
+      populateCategorySelect(dstcategoryselect);
+
+      // ─── Wire category → subcategory (dynamic)
+      function wireCategorySubcategory(catsel, subsel) {
+        catsel.addEventListener("change", function () {
+          const selectedCat = this.value;
+          subsel.innerHTML = '<option value="">select a subcategory</option>';
+          subsel.disabled = !selectedCat;
+          if (selectedCat && categories[selectedCat]) {
+            categories[selectedCat].forEach((sub) => {
+              const opt = document.createElement("option");
+              opt.value = sub;
+              opt.textContent = sub;
+              subsel.appendChild(opt);
+            });
+          }
+          triggerPreview();
+        });
+        subsel.addEventListener("change", triggerPreview);
+      }
+      wireCategorySubcategory(srccategoryselect, srcsubcategoryselect);
+      wireCategorySubcategory(dstcategoryselect, dstsubcategoryselect);
+      amountinput.addEventListener("input", triggerPreview);
+
+      // ─── MODE logic + reset + lock handling ─────────────────────────────────────
+      function applyMode(mode) {
+        currentmode = mode;
+        document.querySelectorAll(".mode-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.mode === mode);
+        });
+        resetFormFields();
+
+        if (mode === "single-buy") {
+          // source locked to 'assets'
+          srccategoryselect.style.display = "none";
+          srccategorylocked.style.display = "";
+          srccategorylocked.textContent = "assets";
+          // populate source subcategory instantly with assets subcategories
+          srcsubcategoryselect.innerHTML =
+            '<option value="">select a subcategory</option>';
+          categories["assets"].forEach((sub) => {
+            const opt = document.createElement("option");
+            opt.value = sub;
+            opt.textContent = sub;
+            srcsubcategoryselect.appendChild(opt);
+          });
+          srcsubcategoryselect.disabled = false;
+          // destination is free
+          dstcategoryselect.style.display = "";
+          dstcategorylocked.style.display = "none";
+          dstsubcategoryselect.disabled = true;
+          dstsubcategoryselect.innerHTML =
+            '<option value="">select a category first</option>';
+        } else if (mode === "single-sell") {
+          // destination locked to 'assets'
+          dstcategoryselect.style.display = "none";
+          dstcategorylocked.style.display = "";
+          dstcategorylocked.textContent = "assets";
+          dstsubcategoryselect.innerHTML =
+            '<option value="">select a subcategory</option>';
+          categories["assets"].forEach((sub) => {
+            const opt = document.createElement("option");
+            opt.value = sub;
+            opt.textContent = sub;
+            dstsubcategoryselect.appendChild(opt);
+          });
+          dstsubcategoryselect.disabled = false;
+          // source free
+          srccategoryselect.style.display = "";
+          srccategorylocked.style.display = "none";
+          srcsubcategoryselect.disabled = true;
+          srcsubcategoryselect.innerHTML =
+            '<option value="">select a category first</option>';
+        } else {
+          // double entry
+          srccategoryselect.style.display = "";
+          srccategorylocked.style.display = "none";
+          dstcategoryselect.style.display = "";
+          dstcategorylocked.style.display = "none";
+          srcsubcategoryselect.disabled = true;
+          dstsubcategoryselect.disabled = true;
+          srcsubcategoryselect.innerHTML =
+            '<option value="">select a category first</option>';
+          dstsubcategoryselect.innerHTML =
+            '<option value="">select a category first</option>';
+        }
+        triggerPreview();
+      }
+
+      document.querySelectorAll(".mode-btn").forEach((btn) => {
+        btn.addEventListener("click", () => applyMode(btn.dataset.mode));
+      });
+
+      function resetFormFields() {
+        if (currentmode !== "single-buy") {
+          srccategoryselect.value = "";
+          srcsubcategoryselect.value = "";
+        }
+        if (currentmode !== "single-sell") {
+          dstcategoryselect.value = "";
+          dstsubcategoryselect.value = "";
+        }
+        amountinput.value = "";
+        if (currentmode === "double") {
+          srcsubcategoryselect.disabled = true;
+          dstsubcategoryselect.disabled = true;
+          srcsubcategoryselect.innerHTML =
+            '<option value="">select a category first</option>';
+          dstsubcategoryselect.innerHTML =
+            '<option value="">select a category first</option>';
+        }
+        messagediv.textContent = "";
+      }
+
+      // ─── Sanitize inputs (full or partial) ─────────────────────────────────────
+      function sanitizeInputs(mode = "full") {
+        // resolve effective category values (locked override select)
+        let srcCatRaw =
+          currentmode === "single-buy" ? "assets" : srccategoryselect.value;
+        let dstCatRaw =
+          currentmode === "single-sell" ? "assets" : dstcategoryselect.value;
+        const srcSubRaw = srcsubcategoryselect.value;
+        const dstSubRaw = dstsubcategoryselect.value;
+        const amountRaw = amountinput.value;
+
+        const srcCat = srcCatRaw?.trim() || "";
+        const dstCat = dstCatRaw?.trim() || "";
+
+        if (mode === "full") {
+          if (!srcCat || !categories[srcCat])
+            return {
+              ok: false,
+              error: "Please select a valid source category.",
+            };
+          if (!srcSubRaw || !categories[srcCat]?.includes(srcSubRaw))
+            return {
+              ok: false,
+              error: "Please select a valid source subcategory.",
+            };
+          if (!dstCat || !categories[dstCat])
+            return {
+              ok: false,
+              error: "Please select a valid destination category.",
+            };
+          if (!dstSubRaw || !categories[dstCat]?.includes(dstSubRaw))
+            return {
+              ok: false,
+              error: "Please select a valid destination subcategory.",
+            };
+          if (srcCat === dstCat && srcSubRaw === dstSubRaw)
+            return {
+              ok: false,
+              error: "Source and destination cannot be the same.",
+            };
+          const amountNum = parseFloat(amountRaw);
+          if (isNaN(amountNum) || amountNum <= 0 || !isFinite(amountNum))
+            return { ok: false, error: "Amount must be a positive number." };
+          const finalAmount = Math.round(amountNum * 100) / 100;
+          return {
+            ok: true,
+            srcCat,
+            srcSub: srcSubRaw,
+            dstCat,
+            dstSub: dstSubRaw,
+            amount: finalAmount,
+          };
+        }
+        // partial preview
+        const amountNum = parseFloat(amountRaw);
+        return {
+          ok: true,
+          srcCat: srcCat && categories[srcCat] ? srcCat : null,
+          srcSub:
+            srcCat && srcSubRaw && categories[srcCat]?.includes(srcSubRaw)
+              ? srcSubRaw
+              : null,
+          dstCat: dstCat && categories[dstCat] ? dstCat : null,
+          dstSub:
+            dstCat && dstSubRaw && categories[dstCat]?.includes(dstSubRaw)
+              ? dstSubRaw
+              : null,
+          amount:
+            !isNaN(amountNum) && amountNum > 0 && isFinite(amountNum)
+              ? Math.round(amountNum * 100) / 100
+              : null,
+        };
+      }
+
+      // ─── RENDER PORTFOLIO (shows ALL categories & subcategories) ───────────────
+      // highlights = { srcKey, dstKey, style, srcPreviewAmount, dstPreviewAmount }
+      function renderPortfolio(highlights) {
+        const h = highlights || {
+          srcKey: null,
+          dstKey: null,
+          style: "preview",
+          srcPreviewAmount: null,
+          dstPreviewAmount: null,
+        };
+
+        const sortedPortfolio = [...portfolioMaster].sort((a, b) => {
+          if (a.category === b.category)
+            return a.subcategory.localeCompare(b.subcategory);
+          return a.category.localeCompare(b.category);
+        });
+
+        const rowsHtml = [];
+        for (const entry of sortedPortfolio) {
+          const key = `${entry.category}||${entry.subcategory}`;
+          let rowClass = "";
+          let previewIndicator = "";
+
+          // ---- PREVIEW HIGHLIGHT (dotted line) - always show if key matches, regardless of amount ----
+          if (h.style === "preview") {
+            if (h.srcKey === key) {
+              rowClass = "preview-src";
+              // amount indicator only if preview amount is present (positive number)
+              if (h.srcPreviewAmount !== null && h.srcPreviewAmount > 0) {
+                previewIndicator = `<span style="color: #dc2626; margin-left: 8px; font-size: 0.85rem;">(-$${h.srcPreviewAmount.toFixed(2)})</span>`;
+              }
+            } else if (h.dstKey === key) {
+              rowClass = "preview-dst";
+              if (h.dstPreviewAmount !== null && h.dstPreviewAmount > 0) {
+                previewIndicator = `<span style="color: #16a34a; margin-left: 8px; font-size: 0.85rem;">(+$${h.dstPreviewAmount.toFixed(2)})</span>`;
+              }
+            }
+          }
+          // ---- COMMIT HIGHLIGHT (solid outline) ----
+          else if (h.style === "commit") {
+            if (h.srcKey === key) rowClass = "commit-src";
+            else if (h.dstKey === key) rowClass = "commit-dst";
+          }
+
+          const displayAmount = entry.amount;
+          const amountFormatted =
+            displayAmount !== undefined && displayAmount !== null
+              ? displayAmount.toFixed(2)
+              : "0.00";
+          rowsHtml.push(
+            `<tr class="${rowClass}">\
+              <td>${escapeHtml(entry.category)}</td>\
+              <td>${escapeHtml(entry.subcategory)}${previewIndicator}</td>\
+              <td class="${displayAmount === 0 ? "zero-balance" : ""}">$${amountFormatted}</td>\
+            </tr>`,
+          );
+        }
+        portfoliobody.innerHTML = rowsHtml.join("");
+      }
+
+      function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function (m) {
+          if (m === "&") return "&amp;";
+          if (m === "<") return "&lt;";
+          if (m === ">") return "&gt;";
+          return m;
+        });
+      }
+
+      // ─── RENDER HISTORY (with optional ghost row) ────────────────────────────────
+      function renderHistory(opts) {
+        opts = opts || {};
+        const reversedHistory = [...history].reverse();
+        const val = (v) => (v != null ? v : "—");
+        const makeRow = (tx, cls) => `
+          <tr class="${cls}">
+            <td>${val(tx.id)}</td>
+            <td>${val(tx.action)}</td>
+            <td>${val(tx.srccat)}</td>
+            <td>${val(tx.srcsub)}</td>
+            <td>${val(tx.dstcat)}</td>
+            <td>${val(tx.dstsub)}</td>
+            <td>${tx.amount != null ? tx.amount.toFixed(2) : "—"}</td>
+            <td>${val(tx.timestamp)}</td>
+          </tr>`;
+
+        let html = "";
+        if (opts.ghostRow) html += makeRow(opts.ghostRow, "preview-hist");
+        if (reversedHistory.length === 0 && !opts.ghostRow) {
+          historybody.innerHTML =
+            '<tr><td colspan="8">no transactions yet</td></tr>';
+          return;
+        }
+        html += reversedHistory
+          .map((tx, idx) =>
+            makeRow(tx, idx === 0 && opts.commitTop ? "commit-hist" : ""),
+          )
+          .join("");
+        historybody.innerHTML = html;
+      }
+
+      // ─── LIVE PREVIEW (with improved partial selection + insufficient balance handling) ──
+      function triggerPreview() {
+        messagediv.textContent = "";
+        const p = sanitizeInputs("partial");
+
+        let srcKey = null,
+          dstKey = null;
+        let srcPreviewAmount = null,
+          dstPreviewAmount = null;
+        let insufficientBalance = false;
+        let errorMsg = "";
+
+        // ---- Source handling ----
+        if (p.srcCat && p.srcSub) {
+          srcKey = `${p.srcCat}||${p.srcSub}`;
+          // if amount is present, check balance
+          if (p.amount !== null && p.amount > 0) {
+            const balance = getBalance(p.srcCat, p.srcSub);
+            if (balance < p.amount) {
+              insufficientBalance = true;
+              errorMsg = `Insufficient balance: ${p.srcSub} (${p.srcCat}) has ${balance.toFixed(2)}, need ${p.amount.toFixed(2)}.`;
+              messagediv.textContent = errorMsg;
+              srcPreviewAmount = null; // no amount preview
+            } else {
+              srcPreviewAmount = p.amount;
+            }
+          } else {
+            // amount empty or zero: no amount preview, but still highlight the row (dotted line)
+            srcPreviewAmount = null;
+          }
+        }
+
+        // ---- Destination handling ----
+        // Only preview destination if:
+        // 1. destination category+subcategory selected
+        // 2. NO insufficient balance on source (when source is selected and amount exists and balance insufficient, we skip destination preview)
+        //    If source is not selected OR balance is sufficient, destination can be previewed.
+        if (p.dstCat && p.dstSub) {
+          const shouldPreviewDst = !insufficientBalance;
+          if (shouldPreviewDst) {
+            dstKey = `${p.dstCat}||${p.dstSub}`;
+            if (p.amount !== null && p.amount > 0) {
+              dstPreviewAmount = p.amount;
+            } else {
+              dstPreviewAmount = null;
+            }
+          } else {
+            // insufficient balance case: explicitly do NOT preview destination
+            dstKey = null;
+            dstPreviewAmount = null;
+          }
+        }
+
+        // Render portfolio with the determined keys and preview amounts
+        renderPortfolio({
+          srcKey: srcKey,
+          dstKey: dstKey,
+          style: "preview",
+          srcPreviewAmount: srcPreviewAmount,
+          dstPreviewAmount: dstPreviewAmount,
+        });
+
+        // Build ghost history row (always show preview of intended transaction)
+        const anyFilled =
+          p.srcCat || p.srcSub || p.dstCat || p.dstSub || p.amount;
+        if (!anyFilled) {
+          renderHistory();
+          return;
+        }
+        // If insufficient balance, still show ghost row but mark it as error in message? We keep ghost row but user sees error.
+        // Ghost row shows what would happen if balance were sufficient.
+        const ghostTx = {
+          id: `${history.length + 1}*`,
+          action: "(preview)",
+          srccat: p.srcCat || "—",
+          srcsub: p.srcSub || "—",
+          dstcat: p.dstCat || "—",
+          dstsub: p.dstSub || "—",
+          amount: p.amount,
+          timestamp: "—",
+        };
+        renderHistory({ ghostRow: ghostTx });
+      }
+
+      // ─── COMMIT TRANSACTION ────────────────────────────────────────────────────
+      function handleTransaction(action) {
+        messagediv.textContent = "";
+        const r = sanitizeInputs("full");
+        if (!r.ok) {
+          messagediv.textContent = r.error;
+          return;
+        }
+        const { srcCat, srcSub, dstCat, dstSub, amount } = r;
+        const srcBalance = getBalance(srcCat, srcSub);
+        if (srcBalance < amount) {
+          messagediv.textContent = `Insufficient ${action === "buy" ? "balance" : "holdings"}: ${srcSub} (${srcCat}) has ${srcBalance.toFixed(2)}, need ${amount.toFixed(2)}.`;
+          renderPortfolio();
+          renderHistory({});
+          return;
+        }
+        // Perform debit & credit
+        debit(srcCat, srcSub, amount);
+        credit(dstCat, dstSub, amount);
+
+        const label = action === "buy" ? "buy" : "sell";
+        messagediv.textContent = `${label} successful: ${amount.toFixed(2)} moved from ${srcSub} (${srcCat}) → ${dstSub} (${dstCat}).`;
+
+        history.push({
+          id: history.length + 1,
+          action: label,
+          srccat: srcCat,
+          srcsub: srcSub,
+          dstcat: dstCat,
+          dstsub: dstSub,
+          amount: amount,
+          timestamp: new Date().toLocaleString(),
+        });
+
+        // render portfolio with commit highlights (src and dst rows)
+        renderPortfolio({
+          srcKey: `${srcCat}||${srcSub}`,
+          dstKey: `${dstCat}||${dstSub}`,
+          style: "commit",
+          srcPreviewAmount: null,
+          dstPreviewAmount: null,
+        });
+        renderHistory({ commitTop: true });
+
+        // after 10 sec reset highlights to normal (but keep data)
+        setTimeout(() => {
+          renderPortfolio();
+          renderHistory({});
+        }, 10000);
+
+        resetFormFields();
+        // Force subcategory dropdowns re-validation in double mode
+        if (currentmode === "double") {
+          srcsubcategoryselect.disabled = true;
+          dstsubcategoryselect.disabled = true;
+        } else if (currentmode === "single-buy") {
+          dstsubcategoryselect.disabled = true;
+        } else if (currentmode === "single-sell") {
+          srcsubcategoryselect.disabled = true;
+        }
+        triggerPreview(); // refresh preview after commit to clear ghost preview
+      }
+
+      buybtn.addEventListener("click", () => handleTransaction("buy"));
+      sellbtn.addEventListener("click", () => handleTransaction("sell"));
+
+      // ─── INITIALIZE: seed initial cash and render ──────────────────────────────
+      function initPortfolioWithZeroes() {
+        const cashIndex = findPortfolioIndex("assets", "cash");
+        if (cashIndex !== -1) {
+          portfolioMaster[cashIndex].amount = 100000;
+        } else {
+          portfolioMaster.push({
+            category: "assets",
+            subcategory: "cash",
+            amount: 100000,
+          });
+        }
+        renderPortfolio();
+        renderHistory({});
+      }
+
+      initPortfolioWithZeroes();
+      applyMode("double");
+        </script>
+    </body>
+</html>
