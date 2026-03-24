@@ -3,119 +3,38 @@
     <div id="category-summary"></div>
 </div>
 <script>
-    // Wait for DOM to be fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        const updateBtn = document.getElementById('updateBtn');
-        const categorySummary = document.getElementById('category-summary');
-        
-        updateBtn.addEventListener('click', function() {
-            fetch('/api/category-summary/')
-                .then(response => {
-                    if (!response.ok) {
-                        console.log(response);
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    updateCategorySummary(data);
-                })
-                .catch(error => {
-                    categorySummary.innerHTML = '<p>Error loading data: ' + error.message + '</p>';
-                });
-        });
+  // Wait for DOM to be fully loaded
+  document.addEventListener("DOMContentLoaded", function () {
+    const updateBtn = document.getElementById("updateBtn");
+    const categorySummary = document.getElementById("category-summary");
 
-        function updateCategorySummary(data) {
-            let html = '';
-            
-            // Loop through categories
-            for (const [category, subcategories] of Object.entries(data.categories)) {
-                html += `<h3>${category}</h3>`;
-                html += '<ul>';
-                
-                // Loop through subcategories
-                for (const [subcategory, value] of Object.entries(subcategories)) {
-                    html += `<li>${subcategory}: ${value}</li>`;
-                }
-                
-                html += '</ul>';
-            }
-            
-            // Add grand total
-            html += `<h3>Grand Total: ${data.grand_total}</h3>`;
-            
-            categorySummary.innerHTML = html;
+    updateBtn.addEventListener("click", function () {});
+
+    function updateCategorySummary(data) {
+      let html = "";
+
+      // Loop through categories
+      for (const [category, subcategories] of Object.entries(data.categories)) {
+        html += `<h3>${category}</h3>`;
+        html += "<ul>";
+
+        // Loop through subcategories
+        for (const [subcategory, value] of Object.entries(subcategories)) {
+          html += `<li>${subcategory}: ${value}</li>`;
         }
-    });
+
+        html += "</ul>";
+      }
+
+      // Add grand total
+      html += `<h3>Grand Total: ${data.grand_total}</h3>`;
+
+      categorySummary.innerHTML = html;
+    }
+  });
 </script>
 <button id="updateBtn" class="update-button">Update Summary</button>
 <button id="export-excel-btn" class="btn btn-primary">Export to Excel</button>
-<div id="export-progress" style="display: none;">
+<div id="export-progress" style="display: none">
     <p>Generating Excel file... Please wait.</p>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const exportBtn = document.getElementById('export-excel-btn');
-    const progressDiv = document.getElementById('export-progress');
-    
-    exportBtn.addEventListener('click', async function() {
-        try {
-            // Show progress indicator
-            progressDiv.style.display = 'block';
-            exportBtn.disabled = true;
-            exportBtn.textContent = 'Generating...';
-            
-            // Make POST request
-            const response = await fetch('/api/excel-export/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                },
-            });
-            
-            if (response.ok) {
-                // Get the blob from response
-                const blob = await response.blob();
-                
-                // Create download link
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'data_export.xlsx';
-                document.body.appendChild(a);
-                a.click();
-                
-                // Cleanup
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } else {
-                throw new Error('Export failed');
-            }
-        } catch (error) {
-            console.error('Export error:', error);
-            alert('Error exporting data. Please try again.');
-        } finally {
-            // Hide progress indicator
-            progressDiv.style.display = 'none';
-            exportBtn.disabled = false;
-            exportBtn.textContent = 'Export to Excel';
-        }
-    });
-    
-    // Function to get CSRF token from cookies
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-});
-</script>
