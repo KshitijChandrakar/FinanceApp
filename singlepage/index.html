@@ -19,14 +19,12 @@
                 min-height: 100vh;
             }
 
-            /* ── Layout ─────────────────────────────────────────────── */
             .page-wrapper {
                 display: flex;
                 gap: 0;
                 min-height: 100vh;
             }
 
-            /* LEFT PANEL – form + history — 60% */
             .left-panel {
                 flex: 6;
                 background: #fff;
@@ -38,7 +36,6 @@
                 min-width: 0;
             }
 
-            /* RIGHT PANEL – five category tables — 40% */
             .right-panel {
                 flex: 4;
                 padding: 24px 20px;
@@ -47,7 +44,6 @@
                 min-width: 0;
             }
 
-            /* ── Section headings ───────────────────────────────────── */
             h3 {
                 font-size: 0.72rem;
                 font-weight: 700;
@@ -59,7 +55,6 @@
                 color: #1a1a1a;
             }
 
-            /* ── Mode bar ───────────────────────────────────────────── */
             #mode-bar {
                 display: flex;
                 gap: 0;
@@ -94,7 +89,6 @@
                 background: #f0f0e8;
             }
 
-            /* ── Form table ─────────────────────────────────────────── */
             .form-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -150,7 +144,6 @@
                 color: #aaa;
             }
 
-            /* ── Amount row ─────────────────────────────────────────── */
             .amount-row {
                 display: flex;
                 align-items: center;
@@ -165,7 +158,6 @@
                 max-width: 180px;
             }
 
-            /* ── Action buttons ─────────────────────────────────────── */
             .action-btns {
                 display: flex;
                 gap: 8px;
@@ -199,7 +191,6 @@
                 background: #f0f0e8;
             }
 
-            /* ── Message ────────────────────────────────────────────── */
             #message {
                 font-size: 0.72rem;
                 padding: 6px 8px;
@@ -213,7 +204,6 @@
                 background: #e8f0fb;
             }
 
-            /* ── History table ──────────────────────────────────────── */
             #history-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -238,13 +228,11 @@
                 border-bottom: none;
             }
 
-            /* ── Right panel: 5 portfolio tables ───────────────────── */
             .portfolio-grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 18px;
             }
-            /* Last item (5th) spans both columns and stays centered */
             .portfolio-card:nth-child(5) {
                 grid-column: 1 / -1;
                 max-width: 50%;
@@ -276,8 +264,9 @@
                 border-radius: 2px;
                 margin-left: auto;
                 letter-spacing: 0.08em;
+                font-variant-numeric: tabular-nums;
             }
-            /* Category accent colors */
+
             .cat-assets h4 {
                 color: #1a6fbd;
             }
@@ -343,7 +332,6 @@
                 color: #bbb !important;
             }
 
-            /* ── Preview / commit highlights ────────────────────────── */
             tr.preview-src {
                 outline: 2px dashed #dc2626;
             }
@@ -365,7 +353,6 @@
                 background: #fffde7;
             }
 
-            /* locked label */
             .locked-label {
                 font-size: 0.78rem;
                 font-weight: 700;
@@ -537,6 +524,16 @@
                     100;
                 return true;
             }
+
+            function getCategoryTotal(cat) {
+                return portfolioMaster
+                    .filter((e) => e.category === cat)
+                    .reduce(
+                        (sum, e) => Math.round((sum + e.amount) * 100) / 100,
+                        0,
+                    );
+            }
+
             const history = [];
 
             // ─── DOM REFS ──────────────────────────────────────────────────────
@@ -601,7 +598,6 @@
                 });
                 resetFormFields();
 
-                // ── Button visibility based on mode ──
                 if (mode === "single-buy") {
                     buybtn.style.display = "";
                     sellbtn.style.display = "none";
@@ -790,7 +786,7 @@
                             equities: "📈",
                         }[cat] || "";
                     card.innerHTML = `
-            <h4>${emoji} ${cat}<span class="cat-badge">${categories[cat].length} items</span></h4>
+            <h4>${emoji} ${cat}<span class="cat-badge" id="cat-total-${cat}">$0.00</span></h4>
             <table class="cat-table">
               <thead>
                 <tr><th>subcategory</th><th style="text-align:right">amount ($)</th></tr>
@@ -819,6 +815,9 @@
 
                 categoryOrder.forEach((cat) => {
                     const tbody = document.getElementById(`cat-body-${cat}`);
+                    const totalBadge = document.getElementById(
+                        `cat-total-${cat}`,
+                    );
                     if (!tbody) return;
 
                     const entries = portfolioMaster
@@ -862,6 +861,12 @@
             </tr>`;
                         })
                         .join("");
+
+                    // ── Update grand total badge ──
+                    if (totalBadge) {
+                        const total = getCategoryTotal(cat);
+                        totalBadge.textContent = `$${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    }
                 });
             }
 
